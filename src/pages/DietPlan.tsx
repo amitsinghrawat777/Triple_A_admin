@@ -82,7 +82,36 @@ export default function DietPlan() {
         }
       ]
     },
-    // Add more meals...
+    {
+      type: 'dinner',
+      time: '7:00 PM',
+      foods: [
+        {
+          name: 'Salmon Fillet',
+          calories: 350,
+          protein: 42,
+          carbs: 0,
+          fats: 18,
+          portion: '200g'
+        },
+        {
+          name: 'Sweet Potato',
+          calories: 180,
+          protein: 2,
+          carbs: 41,
+          fats: 0,
+          portion: '1 medium'
+        },
+        {
+          name: 'Steamed Broccoli',
+          calories: 55,
+          protein: 4,
+          carbs: 11,
+          fats: 0,
+          portion: '1 cup'
+        }
+      ]
+    }
   ];
 
   const getMealIcon = (type: string) => {
