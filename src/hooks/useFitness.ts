@@ -7,7 +7,6 @@ import { useAuth } from '../context/AuthContext';
 export function useFitness() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { user } = useAuth();
 
   const getPersonalizedWorkout = useCallback(async (
     goals: string,

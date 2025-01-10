@@ -14,33 +14,38 @@ import SignUp from './pages/SignUp';
 import VerifyEmail from './pages/VerifyEmail';
 import { ThemeProvider } from './context/ThemeContext';
 import Workouts from './pages/Workouts';
+import ProfileEdit from './pages/ProfileEdit';
+import { ProfileProvider } from './context/ProfileContext';
 
 function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <Routes>
-          <Route path="/welcome" element={<GetStarted />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/user-info" element={<UserInfoForm />} />
-          <Route path="/signup" element={<SignUp />} />
-          <Route path="/verify-email" element={<VerifyEmail />} />
-          <Route 
-            element={
-              <PrivateRoute>
-                <Layout />
-              </PrivateRoute>
-            }
-          >
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/workouts" element={<Workouts />} />
-            <Route path="/diet" element={<DietPlan />} />
-            <Route path="/attendance" element={<Attendance />} />
-            <Route path="/profile" element={<Profile />} />
-          </Route>
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        <ProfileProvider>
+          <Routes>
+            <Route path="/welcome" element={<GetStarted />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<SignUp />} />
+            <Route path="/user-info" element={<UserInfoForm />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
+            <Route 
+              element={
+                <PrivateRoute>
+                  <Layout />
+                </PrivateRoute>
+              }
+            >
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/workouts" element={<Workouts />} />
+              <Route path="/diet" element={<DietPlan />} />
+              <Route path="/attendance" element={<Attendance />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/profile/edit" element={<ProfileEdit />} />
+            </Route>
+            <Route path="*" element={<Navigate to="/welcome" replace />} />
+          </Routes>
+        </ProfileProvider>
       </AuthProvider>
     </ThemeProvider>
   );

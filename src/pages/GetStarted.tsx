@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Dumbbell, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';

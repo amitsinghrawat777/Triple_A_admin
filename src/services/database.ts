@@ -1,123 +1,182 @@
+import { db } from '../config/firebase';
 import { 
   doc, 
   setDoc, 
   getDoc, 
   updateDoc, 
-  collection, 
-  query, 
-  where, 
-  getDocs,
-  addDoc,
-  Timestamp,
-  orderBy,
-  limit 
+  collection,
+  query,
+  where,
+  getDocs
 } from 'firebase/firestore';
-import { db } from '../config/firebase';
-import { UserProfile, WorkoutLog, DietLog } from '../types/database';
+import { auth } from '../config/firebase';
 
-// User Profile Functions
-export const createUserProfile = async (userProfile: UserProfile) => {
-  const userRef = doc(db, 'users', userProfile.uid);
-  await setDoc(userRef, {
-    ...userProfile,
-    joinDate: Timestamp.fromDate(userProfile.joinDate),
-    lastUpdated: Timestamp.fromDate(userProfile.lastUpdated)
-  });
+interface UserProfile {
+  uid: string;
+  email: string;
+  displayName?: string;
+  photoURL?: string;
+  joinDate: Date;
+  lastUpdated: Date;
+  personalInfo?: {
+    age: number;
+    dateOfBirth: string;
+    gender: string;
+    bloodType: string;
+    medicalConditions: string;
+  };
+  measurements?: {
+    weight: number;
+    height: number;
+  };
+  preferences?: {
+    dietary: string[];
+    activityLevel: string;
+    fitnessLevel: string;
+  };
+  goals?: string[];
+}
+
+interface WorkoutSession {
+  date: Date;
+  type: string;
+  exercises: CompletedExercise[];
+  duration: number;
+  notes?: string;
+}
+
+interface CompletedExercise {
+  name: string;
+  sets: Array<{
+    weight: number;
+    reps: number;
+  }>;
+}
+
+interface UserGoals {
+  targetWeight?: number;
+  weeklyWorkouts?: number;
+  fitnessLevel?: string;
+  specificGoals?: string[];
+}
+
+interface UserStats {
+  weight?: number;
+  height?: number;
+  bodyFat?: number;
+  lastUpdated: Date;
+}
+
+export const createUserProfile = async (userData: UserProfile) => {
+  try {
+    await setDoc(doc(db, 'users', userData.uid), {
+      ...userData,
+      joinDate: userData.joinDate.toISOString(),
+      lastUpdated: userData.lastUpdated.toString()
+    });
+  } catch (error) {
+    console.error('Error creating user profile:', error);
+    throw error;
+  }
 };
 
 export const getUserProfile = async (uid: string) => {
-  const userRef = doc(db, 'users', uid);
-  const userSnap = await getDoc(userRef);
-  if (userSnap.exists()) {
-    return userSnap.data() as UserProfile;
+  try {
+    const userDoc = await getDoc(doc(db, 'users', uid));
+    if (userDoc.exists()) {
+      return userDoc.data() as UserProfile;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error fetching profile:', error);
+    throw error;
   }
-  return null;
 };
 
-export const updateUserProfile = async (uid: string, updates: Partial<UserProfile>) => {
-  const userRef = doc(db, 'users', uid);
-  await updateDoc(userRef, {
-    ...updates,
-    lastUpdated: Timestamp.fromDate(new Date())
-  });
+export const updateUserProfile = async (uid: string, updates: any) => {
+  try {
+    console.log('Starting database update...'); // Debug log
+    const userRef = doc(db, 'users', uid);
+    
+    // First check if document exists
+    const docSnap = await getDoc(userRef);
+    
+    const userData = {
+      ...updates,
+      updatedAt: new Date().toISOString(),
+      path: `/databases/(default)/documents/users/${uid}` // Debug info
+    };
+
+    if (!docSnap.exists()) {
+      console.log('Creating new user document at:', userData.path);
+      await setDoc(userRef, {
+        ...userData,
+        createdAt: new Date().toISOString()
+      });
+    } else {
+      console.log('Updating existing user document at:', userData.path);
+      await updateDoc(userRef, userData);
+    }
+    
+    // Verify the update
+    const verifyDoc = await getDoc(userRef);
+    console.log('Document data after update:', verifyDoc.data());
+    
+  } catch (error) {
+    console.error('Database error:', error);
+    console.error('Error code:', (error as any).code);
+    console.error('Error message:', (error as any).message);
+    throw error;
+  }
 };
 
-// Workout Functions
-export const addWorkoutLog = async (workoutLog: WorkoutLog) => {
-  const workoutRef = collection(db, 'workouts');
-  return await addDoc(workoutRef, {
-    ...workoutLog,
-    date: Timestamp.fromDate(workoutLog.date)
-  });
+export const addWorkoutSession = async (uid: string, workout: WorkoutSession) => {
+  try {
+    const userRef = doc(db, 'users', uid);
+    const userDoc = await getDoc(userRef);
+    
+    if (userDoc.exists()) {
+      const userData = userDoc.data();
+      const workoutHistory = userData.workoutHistory || [];
+      
+      await updateDoc(userRef, {
+        workoutHistory: [...workoutHistory, {
+          ...workout,
+          date: workout.date.toISOString()
+        }],
+        lastUpdated: new Date().toISOString()
+      });
+    }
+  } catch (error) {
+    console.error('Error adding workout session:', error);
+    throw error;
+  }
 };
 
-export const getWorkoutLogs = async (userId: string, limit?: number) => {
-  const workoutRef = collection(db, 'workouts');
-  const q = query(
-    workoutRef,
-    where('userId', '==', userId),
-    orderBy('date', 'desc'),
-    limit ? limit(limit) : limit(100)
-  );
-  
-  const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({
-    id: doc.id,
-    ...doc.data()
-  })) as WorkoutLog[];
+export const updateUserStats = async (uid: string, stats: UserStats) => {
+  try {
+    const userRef = doc(db, 'users', uid);
+    await updateDoc(userRef, {
+      stats: {
+        ...stats,
+        lastUpdated: stats.lastUpdated.toISOString()
+      }
+    });
+  } catch (error) {
+    console.error('Error updating user stats:', error);
+    throw error;
+  }
 };
 
-// Diet Functions
-export const addDietLog = async (dietLog: DietLog) => {
-  const dietRef = collection(db, 'diets');
-  return await addDoc(dietRef, {
-    ...dietLog,
-    date: Timestamp.fromDate(dietLog.date)
-  });
-};
-
-export const getDietLogs = async (userId: string, limit?: number) => {
-  const dietRef = collection(db, 'diets');
-  const q = query(
-    dietRef,
-    where('userId', '==', userId),
-    orderBy('date', 'desc'),
-    limit ? limit(limit) : limit(100)
-  );
-  
-  const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({
-    id: doc.id,
-    ...doc.data()
-  })) as DietLog[];
-};
-
-// Progress Tracking Functions
-export const addProgressEntry = async (userId: string, data: {
-  weight?: number;
-  measurements?: Record<string, number>;
-  photos?: string[];
-  date: Date;
-}) => {
-  const progressRef = collection(db, 'progress');
-  return await addDoc(progressRef, {
-    userId,
-    ...data,
-    date: Timestamp.fromDate(data.date)
-  });
-};
-
-export const getProgressHistory = async (userId: string) => {
-  const progressRef = collection(db, 'progress');
-  const q = query(
-    progressRef,
-    where('userId', '==', userId),
-    orderBy('date', 'desc')
-  );
-  
-  const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({
-    id: doc.id,
-    ...doc.data()
-  }));
+export const setUserGoals = async (uid: string, goals: UserGoals) => {
+  try {
+    const userRef = doc(db, 'users', uid);
+    await updateDoc(userRef, {
+      goals,
+      lastUpdated: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error setting user goals:', error);
+    throw error;
+  }
 }; 

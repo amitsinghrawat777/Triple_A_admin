@@ -6,9 +6,9 @@ import { pplWorkoutPlan, WorkoutDay } from '../data/workoutPlans';
 
 export default function Workouts() {
   const { isDarkMode } = useTheme();
-  const [exercises, setExercises] = useState([]);
+  const [exercises, setExercises] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [showTips, setShowTips] = useState(false);
 

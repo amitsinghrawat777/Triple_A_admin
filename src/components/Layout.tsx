@@ -14,7 +14,7 @@ export default function Layout() {
       isDarkMode ? 'bg-dark-bg text-dark-text' : 'bg-gray-50 text-gray-900'
     }`}>
       <Header />
-      <main className="flex-grow pt-16">
+      <main className="flex-1 pb-24 pt-16">
         <Outlet />
       </main>
       <Navigation onLogout={logout} />
