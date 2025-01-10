@@ -1,7 +1,7 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useProfile } from '../context/ProfileContext';
-import { Edit } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
+import { User, Mail, Phone, Calendar } from 'lucide-react';
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -71,30 +71,28 @@ export default function Profile() {
               </div>
             </div>
 
-            {/* Preferences */}
-            <div>
-              <h3 className="text-lg font-medium mb-4">Preferences</h3>
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <p className="text-sm text-gray-400">Fitness Level</p>
-                  <p className="mt-1">{profileData?.preferences?.fitnessLevel || 'Not Set'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-400">Activity Level</p>
-                  <p className="mt-1">{profileData?.preferences?.activityLevel || 'Not Set'}</p>
-                </div>
-              </div>
-              <div className="mt-4">
-                <p className="text-sm text-gray-400">Dietary Preferences</p>
-                <p className="mt-1">
-                  {profileData?.preferences?.dietary?.length > 0 
-                    ? profileData.preferences.dietary.join(', ') 
-                    : 'No dietary preferences set'}
-                </p>
-              </div>
-            </div>
+        {/* Additional Profile Sections */}
+        <div className="mt-8">
+          <h2 className="text-xl font-semibold mb-4">Fitness Goals</h2>
+          <div className={`p-4 rounded-lg ${
+            isDarkMode ? 'bg-gray-800' : 'bg-gray-50'
+          }`}>
+            <p>Set your fitness goals here</p>
           </div>
         </div>
+
+        <div className="mt-8">
+          <h2 className="text-xl font-semibold mb-4">Progress Overview</h2>
+          <div className={`p-4 rounded-lg ${
+            isDarkMode ? 'bg-gray-800' : 'bg-gray-50'
+          }`}>
+            <p>Your progress statistics will appear here</p>
+          </div>
+        </div>
+
+>>>>>>> Stashed changes
+        {/* Existing Membership Section */}
+        {/* ... rest of your profile sections ... */}
       </div>
     </div>
   );

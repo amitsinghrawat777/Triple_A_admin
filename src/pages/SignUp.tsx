@@ -1,29 +1,16 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Dumbbell, Mail, Lock, ArrowRight } from 'lucide-react';
+import { Dumbbell, Mail, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function SignUp() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [passwordError, setPasswordError] = useState('');
-  const { signup, error } = useAuth();
+  const [showPassword, setShowPassword] = useState(false);
+  const { signup, error, loginWithGoogle } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setPasswordError('');
-
-    if (password !== confirmPassword) {
-      setPasswordError('Passwords do not match');
-      return;
-    }
-
-    if (password.length < 6) {
-      setPasswordError('Password must be at least 6 characters long');
-      return;
-    }
-
     try {
       await signup(email, password);
     } catch (err) {
@@ -42,9 +29,9 @@ export default function SignUp() {
           <p className="text-gray-600 mt-2">Start your fitness journey today</p>
         </div>
 
-        {(error || passwordError) && (
+        {error && (
           <div className="mb-4 p-3 rounded bg-red-100 text-red-700 text-sm">
-            {error || passwordError}
+            {error}
           </div>
         )}
 
@@ -75,31 +62,24 @@ export default function SignUp() {
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
                 id="password"
-                type="password"
+                type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-11 pr-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                className="w-full pl-11 pr-12 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
                 placeholder="Create a password"
                 required
               />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700" htmlFor="confirmPassword">
-              Confirm Password
-            </label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                id="confirmPassword"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full pl-11 pr-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
-                placeholder="Confirm your password"
-                required
-              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                {showPassword ? (
+                  <EyeOff className="w-5 h-5" />
+                ) : (
+                  <Eye className="w-5 h-5" />
+                )}
+              </button>
             </div>
           </div>
 
@@ -109,6 +89,23 @@ export default function SignUp() {
           >
             <span>Create Account</span>
             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+          </button>
+
+          <div className="relative my-8">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white text-gray-500">Or continue with</span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={loginWithGoogle}
+            className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+          >
+            Sign up with Google
           </button>
         </form>
 
