@@ -4,6 +4,7 @@ import { doc, getDoc, updateDoc, setDoc, Timestamp, collection, query, orderBy, 
 import { db } from '../config/firebase';
 import { useTheme } from '../context/ThemeContext';
 import { toast } from 'react-hot-toast';
+import { auth } from '../config/firebase';
 
 interface MemberDetails {
   id: string;
@@ -380,40 +381,82 @@ const MemberDetails: React.FC = () => {
 
   const handleDiscontinueMembership = async () => {
     try {
-      if (!memberId) return;
+      if (!memberId) {
+        toast.error('Member ID is required');
+        return;
+      }
+      
       setLoading(true);
+      console.log('Finding active membership for user:', memberId);
 
-      // Find the latest active membership
+      // Check admin status first
+      const token = await auth.currentUser?.getIdTokenResult();
+      if (!token?.claims?.admin) {
+        toast.error('Only admin users can discontinue memberships');
+        return;
+      }
+
+      // Find the latest membership
       const membershipsRef = collection(db, 'memberships');
       const q = query(
         membershipsRef,
         where('userId', '==', memberId),
-        where('is_active', '==', true),
         orderBy('created_at', 'desc'),
         limit(1)
       );
 
       const membershipSnap = await getDocs(q);
+      console.log('Found memberships:', membershipSnap.size);
       
       if (membershipSnap.empty) {
-        toast.error('No active membership found');
+        toast.error('No membership found');
+        setLoading(false);
         return;
       }
 
       const membershipDoc = membershipSnap.docs[0];
+      const membershipData = membershipDoc.data();
+      
+      if (!membershipData.is_active) {
+        toast.error('Membership is already inactive');
+        setLoading(false);
+        return;
+      }
+
+      console.log('Discontinuing membership:', membershipDoc.id);
       const membershipRef = doc(db, 'memberships', membershipDoc.id);
 
-      // Update the membership to inactive
-      await updateDoc(membershipRef, {
+      // Create the update data
+      const updateData = {
         is_active: false,
+        end_date: Timestamp.fromDate(new Date()),
         updated_at: Timestamp.fromDate(new Date())
-      });
+      };
 
+      console.log('Updating membership with data:', updateData);
+
+      // Update the membership to inactive and set end date to today
+      await updateDoc(membershipRef, updateData);
+
+      console.log('Membership discontinued successfully');
       toast.success('Membership discontinued successfully');
-      await fetchMemberDetails();
-    } catch (error) {
+      
+      // Refresh member details and payment history
+      await Promise.all([
+        fetchMemberDetails(),
+        fetchPaymentHistory()
+      ]);
+    } catch (error: any) {
       console.error('Error discontinuing membership:', error);
-      toast.error('Failed to discontinue membership');
+      
+      // More specific error messages based on the error type
+      if (error.code === 'permission-denied') {
+        toast.error('You do not have permission to discontinue memberships. Please ensure you are logged in as an admin.');
+      } else if (error.code === 'not-found') {
+        toast.error('Membership record not found');
+      } else {
+        toast.error('Failed to discontinue membership. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

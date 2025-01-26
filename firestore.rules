@@ -12,10 +12,10 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.token.admin == true;
     }
 
-    // Allow admins to read and write all data
+    // Allow admins to read and write all documents
     match /{document=**} {
-      allow read, write: if isAdmin();
       allow read: if isAuthenticated();
+      allow write: if isAdmin();
     }
 
     // Helper function to check if user is accessing their own data
@@ -71,16 +71,14 @@ service cloud.firestore {
     
     // Allow users to read and write their own profile
     match /profiles/{userId} {
-      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
-      allow write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
     }
 
     // Allow users to read their own membership details
     match /memberships/{membershipId} {
-      allow read: if isAuthenticated() && (resource.data.user_id == request.auth.uid || isAdmin());
-      allow create: if isAdmin();
-      allow update: if isAuthenticated() && (resource.data.user_id == request.auth.uid || isAdmin());
-      allow delete: if isAdmin();
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
     }
 
     // Payment history collection (for querying)
@@ -92,11 +90,9 @@ service cloud.firestore {
       }
     }
 
-    match /attendance/{document} {
-      allow read, write: if isAuthenticated() && 
-        (request.auth.uid == resource.data.userId || 
-         request.auth.uid == request.resource.data.userId || 
-         isAdmin());
+    match /attendance/{attendanceId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
     }
     
     match /attendanceStats/{document} {

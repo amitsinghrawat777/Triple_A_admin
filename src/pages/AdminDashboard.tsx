@@ -4,6 +4,7 @@ import { collection, getDocs, doc, getDoc, query, orderBy, where, Timestamp, lim
 import { db } from '../config/firebase';
 import { DocumentData } from 'firebase/firestore';
 import { useTheme } from '../context/ThemeContext';
+import { toast } from 'react-hot-toast';
 
 interface Member {
   id: string;
@@ -12,7 +13,6 @@ interface Member {
   photoURL?: string | null;
   email: string;
   phone: string;
-  joinDate: string;
   membershipStatus: string;
   membershipType: string;
   membershipStartDate: string;
@@ -22,12 +22,12 @@ interface Member {
 }
 
 interface MemberStats {
-  active: number;
-  expired: number;
-  pending: number;
+  activeMembers: number;
+  expiredMemberships: number;
+  pendingMembers: number;
 }
 
-type SortField = 'name' | 'joinDate' | 'membershipEndDate' | 'membershipStatus';
+type SortField = 'name' | 'email' | 'membershipStatus' | 'membershipStartDate' | 'lastAttendance';
 type SortDirection = 'asc' | 'desc';
 
 interface ProfileData {
@@ -85,9 +85,9 @@ const AdminDashboard: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [stats, setStats] = useState<MemberStats>({
-    active: 0,
-    expired: 0,
-    pending: 0
+    activeMembers: 0,
+    expiredMemberships: 0,
+    pendingMembers: 0
   });
 
   const fetchMembershipData = async (userId: string) => {
@@ -160,31 +160,24 @@ const AdminDashboard: React.FC = () => {
   const fetchMembers = async () => {
     try {
       setLoading(true);
-      setError(null);
-
-      let activeCount = 0;
-      let expiredCount = 0;
-      let pendingCount = 0;
-      const membersData: Member[] = [];
-
-      console.log("Fetching user profiles...");
       const profilesRef = collection(db, 'profiles');
       const profilesSnap = await getDocs(profilesRef);
       
-      console.log("Query response:", {
-        empty: profilesSnap.empty,
-        size: profilesSnap.size
-      });
-
-      for (const docSnapshot of profilesSnap.docs) {
-        const profileData = docSnapshot.data() as ProfileData;
-        console.log("Processing profile:", docSnapshot.id, profileData);
-
-        // Fetch membership data
-        const membershipRef = doc(db, 'memberships', docSnapshot.id);
-        const membershipSnap = await getDoc(membershipRef);
-        const membershipData = membershipSnap.exists() ? membershipSnap.data() as MembershipData : null;
-
+      const membersPromises = profilesSnap.docs.map(async (doc) => {
+        const profileData = doc.data();
+        
+        // Fetch latest membership
+        const membershipsRef = collection(db, 'memberships');
+        const q = query(
+          membershipsRef,
+          where('userId', '==', doc.id),
+          orderBy('created_at', 'desc'),
+          limit(1)
+        );
+        
+        const membershipSnap = await getDocs(q);
+        const membershipData = !membershipSnap.empty ? membershipSnap.docs[0].data() : null;
+        
         // Calculate membership status
         let membershipStatus = 'pending';
         let startDate = 'N/A';
@@ -193,19 +186,18 @@ const AdminDashboard: React.FC = () => {
 
         if (membershipData) {
           membershipType = membershipData.plan_name || 'N/A';
-          membershipStatus = membershipData.status || 'pending';
           
           if (membershipData.start_date) {
-            startDate = membershipData.start_date instanceof Timestamp 
-              ? membershipData.start_date.toDate().toLocaleDateString()
-              : new Date(membershipData.start_date).toLocaleDateString();
+            const startDateTime = membershipData.start_date instanceof Timestamp 
+              ? membershipData.start_date.toDate() 
+              : new Date(membershipData.start_date);
+            startDate = startDateTime.toLocaleDateString();
           }
 
           if (membershipData.end_date) {
             const endDateTime = membershipData.end_date instanceof Timestamp 
               ? membershipData.end_date.toDate() 
               : new Date(membershipData.end_date);
-            
             endDate = endDateTime.toLocaleDateString();
             
             // Update status based on end date and is_active flag
@@ -217,54 +209,34 @@ const AdminDashboard: React.FC = () => {
           }
         }
 
-        // Fetch attendance data with proper error handling
-        let lastAttendance = 'N/A';
+        // Fetch attendance data
+        const attendanceRef = collection(db, 'attendance');
+        const attendanceQuery = query(
+          attendanceRef,
+          where('userId', '==', doc.id),
+          orderBy('date', 'desc'),
+          limit(1)
+        );
+        
+        const attendanceSnap = await getDocs(attendanceQuery);
+        let lastAttendance = 'Never';
         let totalAttendance = 0;
 
-        try {
-          const attendanceRef = collection(db, 'attendance');
-          const q = query(
-            attendanceRef,
-            where('userId', '==', docSnapshot.id),
-            orderBy('date', 'desc'),
-            limit(1)
-          );
-          const attendanceSnap = await getDocs(q);
-
-          if (!attendanceSnap.empty) {
-            const lastRecord = attendanceSnap.docs[0].data() as AttendanceData;
-            lastAttendance = lastRecord.date instanceof Timestamp 
-              ? lastRecord.date.toDate().toLocaleDateString()
-              : new Date(lastRecord.date).toLocaleDateString();
-            
-            // Get total attendance count
-            const totalQ = query(
-              attendanceRef,
-              where('userId', '==', docSnapshot.id)
-            );
-            const totalSnap = await getDocs(totalQ);
-            totalAttendance = totalSnap.size;
-          }
-        } catch (error) {
-          console.error(`Error fetching attendance for ${docSnapshot.id}:`, error);
-          lastAttendance = 'Error';
-          totalAttendance = 0;
+        if (!attendanceSnap.empty) {
+          const lastRecord = attendanceSnap.docs[0].data();
+          lastAttendance = lastRecord.date instanceof Timestamp 
+            ? lastRecord.date.toDate().toLocaleDateString()
+            : new Date(lastRecord.date).toLocaleDateString();
+          totalAttendance = attendanceSnap.size;
         }
 
-        const member: Member = {
-          id: docSnapshot.id,
+        return {
+          id: doc.id,
           name: profileData.username || 'N/A',
           displayName: profileData.username || 'N/A',
-          photoURL: profileData.photoURL || 
-            (profileData.personal_info && profileData.personal_info.photoURL) || 
-            null,
+          photoURL: profileData.photoURL || profileData.personal_info?.photoURL || null,
           email: profileData.email || 'N/A',
           phone: profileData.personal_info?.contact || 'N/A',
-          joinDate: profileData.createdAt instanceof Timestamp 
-            ? profileData.createdAt.toDate().toLocaleDateString()
-            : profileData.createdAt 
-              ? new Date(profileData.createdAt).toLocaleDateString()
-              : 'N/A',
           membershipStatus,
           membershipType,
           membershipStartDate: startDate,
@@ -272,39 +244,24 @@ const AdminDashboard: React.FC = () => {
           lastAttendance,
           totalAttendance
         };
-        
-        membersData.push(member);
-        
-        // Update stats based on membership status
-        switch (membershipStatus) {
-          case 'active':
-            activeCount++;
-            break;
-          case 'expired':
-            expiredCount++;
-            break;
-          default:
-            pendingCount++;
-        }
-      }
+      });
 
+      const membersData = await Promise.all(membersPromises);
+      console.log('Fetched members data:', membersData);
       setMembers(membersData);
-      setStats({
-        active: activeCount,
-        expired: expiredCount,
-        pending: pendingCount
-      });
       
-      console.log("Fetched members:", {
-        total: membersData.length,
-        active: activeCount,
-        expired: expiredCount,
-        pending: pendingCount
-      });
-
+      // Update statistics
+      const stats = membersData.reduce((acc, member) => {
+        if (member.membershipStatus === 'active') acc.activeMembers++;
+        else if (member.membershipStatus === 'expired') acc.expiredMemberships++;
+        else acc.pendingMembers++;
+        return acc;
+      }, { activeMembers: 0, expiredMemberships: 0, pendingMembers: 0 });
+      
+      setStats(stats);
     } catch (error) {
-      console.error("Error fetching members:", error);
-      setError("Failed to fetch members. Please try again later.");
+      console.error('Error fetching members:', error);
+      toast.error('Failed to fetch members. Please try again later.');
     } finally {
       setLoading(false);
     }
@@ -343,6 +300,24 @@ const AdminDashboard: React.FC = () => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     return filteredAndSortedMembers.slice(startIndex, startIndex + itemsPerPage);
   }, [filteredAndSortedMembers, currentPage, itemsPerPage]);
+
+  const sortMembers = (a: Member, b: Member, field: SortField, direction: 'asc' | 'desc'): number => {
+    const multiplier = direction === 'asc' ? 1 : -1;
+    
+    switch (field) {
+      case 'name':
+      case 'email':
+      case 'membershipStatus':
+        return multiplier * (a[field].localeCompare(b[field]));
+      case 'membershipStartDate':
+      case 'lastAttendance':
+        const dateA = a[field] === 'N/A' || a[field] === 'Never' ? new Date(0) : new Date(a[field]);
+        const dateB = b[field] === 'N/A' || b[field] === 'Never' ? new Date(0) : new Date(b[field]);
+        return multiplier * (dateA.getTime() - dateB.getTime());
+      default:
+        return 0;
+    }
+  };
 
   if (loading) {
     return (
@@ -398,7 +373,7 @@ const AdminDashboard: React.FC = () => {
               <div className="ml-5 w-0 flex-1">
                 <dl>
                   <dt className={`text-sm font-medium truncate ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Active Members</dt>
-                  <dd className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{stats.active}</dd>
+                  <dd className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{stats.activeMembers}</dd>
                 </dl>
               </div>
             </div>
@@ -419,7 +394,7 @@ const AdminDashboard: React.FC = () => {
               <div className="ml-5 w-0 flex-1">
                 <dl>
                   <dt className={`text-sm font-medium truncate ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Expired Memberships</dt>
-                  <dd className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{stats.expired}</dd>
+                  <dd className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{stats.expiredMemberships}</dd>
                 </dl>
               </div>
             </div>
@@ -440,7 +415,7 @@ const AdminDashboard: React.FC = () => {
               <div className="ml-5 w-0 flex-1">
                 <dl>
                   <dt className={`text-sm font-medium truncate ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Pending Members</dt>
-                  <dd className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{stats.pending}</dd>
+                  <dd className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{stats.pendingMembers}</dd>
                 </dl>
               </div>
             </div>
@@ -509,39 +484,37 @@ const AdminDashboard: React.FC = () => {
                   </thead>
                   <tbody className={`${isDarkMode ? 'divide-gray-700' : 'divide-gray-200'}`}>
                     {members.map((member) => (
-                      <tr key={member.id} className={isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}>
-                        <td className={`whitespace-nowrap py-4 pl-4 pr-3 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+                      <tr key={member.id} className={`${isDarkMode ? 'hover:bg-gray-700/50' : 'hover:bg-gray-50'}`}>
+                        <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
-                            <div className="h-10 w-10 flex-shrink-0">
+                            <div className="flex-shrink-0 h-10 w-10">
                               {member.photoURL ? (
                                 <img className="h-10 w-10 rounded-full" src={member.photoURL} alt="" />
                               ) : (
-                                <div className={`h-10 w-10 rounded-full flex items-center justify-center ${isDarkMode ? 'bg-gray-600' : 'bg-gray-200'}`}>
-                                  <span className={`text-lg font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                                  isDarkMode ? 'bg-gray-600' : 'bg-gray-200'
+                                }`}>
+                                  <span className={`text-lg font-medium ${
+                                    isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                                  }`}>
                                     {member.name.charAt(0).toUpperCase()}
                                   </span>
                                 </div>
                               )}
                             </div>
                             <div className="ml-4">
-                              <div className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{member.name}</div>
-                              <div className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{member.email}</div>
+                              <div className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                                {member.name}
+                              </div>
+                              <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                {member.email}
+                              </div>
                             </div>
                           </div>
                         </td>
-                        <td className={`whitespace-nowrap px-3 py-4 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
-                          <div>{member.phone}</div>
-                          <div className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Joined: {member.joinDate}</div>
-                        </td>
-                        <td className={`whitespace-nowrap px-3 py-4 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
-                          <div>{member.membershipType}</div>
-                          <div className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                            {member.membershipEndDate}
-                          </div>
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm">
-                          <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 
-                            ${member.membershipStatus === 'active'
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${
+                            member.membershipStatus === 'active'
                               ? isDarkMode 
                                 ? 'bg-green-900 text-green-300'
                                 : 'bg-green-100 text-green-800'
@@ -552,19 +525,26 @@ const AdminDashboard: React.FC = () => {
                                 : isDarkMode
                                   ? 'bg-yellow-900 text-yellow-300'
                                   : 'bg-yellow-100 text-yellow-800'
-                            }`}
-                          >
+                          }`}>
                             {member.membershipStatus}
                           </span>
                         </td>
-                        <td className={`whitespace-nowrap px-3 py-4 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
-                          <div>Total: {member.totalAttendance}</div>
-                          <div className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Last: {member.lastAttendance}</div>
+                        <td className={`px-6 py-4 whitespace-nowrap text-sm ${
+                          isDarkMode ? 'text-gray-300' : 'text-gray-500'
+                        }`}>
+                          {member.membershipStartDate}
                         </td>
-                        <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
+                        <td className={`px-6 py-4 whitespace-nowrap text-sm ${
+                          isDarkMode ? 'text-gray-300' : 'text-gray-500'
+                        }`}>
+                          {member.lastAttendance}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <Link
                             to={`/admin/members/${member.id}`}
-                            className={`text-indigo-600 hover:text-indigo-900 ${isDarkMode ? 'text-indigo-400 hover:text-indigo-300' : ''}`}
+                            className={`text-blue-600 hover:text-blue-900 ${
+                              isDarkMode ? 'text-blue-400 hover:text-blue-300' : ''
+                            }`}
                           >
                             View Details
                           </Link>
