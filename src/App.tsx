@@ -8,6 +8,7 @@ import Layout from './components/Layout';
 import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
 import MemberDetails from './pages/MemberDetails';
+import AdminSettings from './pages/AdminSettings';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -85,6 +86,16 @@ function App() {
             <ProtectedRoute>
               <Layout>
                 <MemberDetails />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/settings"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <AdminSettings />
               </Layout>
             </ProtectedRoute>
           }
