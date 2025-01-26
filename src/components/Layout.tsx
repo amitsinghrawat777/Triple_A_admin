@@ -84,33 +84,35 @@ export default function Layout({ children }: LayoutProps) {
               </button>
 
               {isThemeMenuOpen && (
-                <div className={`absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 ${
-                  isDarkMode ? 'bg-gray-700' : 'bg-white'
-                } ring-1 ring-black ring-opacity-5`}>
-                  <button
-                    onClick={() => handleThemeChange('light')}
-                    className={`block px-4 py-2 text-sm w-full text-left ${
-                      isDarkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    Light
-                  </button>
-                  <button
-                    onClick={() => handleThemeChange('dark')}
-                    className={`block px-4 py-2 text-sm w-full text-left ${
-                      isDarkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    Dark
-                  </button>
-                  <button
-                    onClick={() => handleThemeChange('system')}
-                    className={`block px-4 py-2 text-sm w-full text-left ${
-                      isDarkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    System
-                  </button>
+                <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg z-50">
+                  <div className={`rounded-md ring-1 ring-black ring-opacity-5 ${
+                    isDarkMode ? 'bg-gray-800' : 'bg-white'
+                  }`}>
+                    <button
+                      onClick={() => handleThemeChange('light')}
+                      className={`block px-4 py-2 text-sm w-full text-left ${
+                        isDarkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      Light
+                    </button>
+                    <button
+                      onClick={() => handleThemeChange('dark')}
+                      className={`block px-4 py-2 text-sm w-full text-left ${
+                        isDarkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      Dark
+                    </button>
+                    <button
+                      onClick={() => handleThemeChange('system')}
+                      className={`block px-4 py-2 text-sm w-full text-left ${
+                        isDarkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      System
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

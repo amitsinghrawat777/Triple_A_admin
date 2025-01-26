@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { collection, getDocs, doc, getDoc, query, orderBy, where, Timestamp, limit, QueryDocumentSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { DocumentData } from 'firebase/firestore';
@@ -95,6 +95,7 @@ const AdminDashboard: React.FC = () => {
     pendingMembers: 0
   });
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const navigate = useNavigate();
 
   const fetchMembershipData = async (userId: string) => {
     try {
@@ -529,7 +530,7 @@ const AdminDashboard: React.FC = () => {
               
               {/* Suggestions Dropdown */}
               {showSuggestions && suggestions.length > 0 && (
-                <div className={`absolute z-10 mt-1 w-full rounded-md shadow-lg ${
+                <div className={`absolute z-40 mt-1 w-full rounded-md shadow-lg ${
                   isDarkMode ? 'bg-gray-700' : 'bg-white'
                 } ring-1 ring-black ring-opacity-5`}>
                   <ul className="max-h-60 overflow-auto py-1" role="listbox">
@@ -675,7 +676,11 @@ const AdminDashboard: React.FC = () => {
                   </thead>
                   <tbody className={`${isDarkMode ? 'divide-gray-700' : 'divide-gray-200'}`}>
                     {paginatedMembers.map((member) => (
-                      <tr key={member.id} className={`${isDarkMode ? 'hover:bg-gray-700/50' : 'hover:bg-gray-50'}`}>
+                      <tr 
+                        key={member.id} 
+                        onClick={() => navigate(`/admin/members/${member.id}`)}
+                        className={`${isDarkMode ? 'hover:bg-gray-700/50' : 'hover:bg-gray-50'} cursor-pointer transition-colors duration-200`}
+                      >
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             <div className="flex-shrink-0 h-10 w-10">
@@ -704,6 +709,19 @@ const AdminDashboard: React.FC = () => {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
+                          <div className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+                            {member.phone}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+                            {member.membershipType}
+                          </div>
+                          <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                            {member.membershipStartDate}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${
                             member.membershipStatus === 'active'
                               ? isDarkMode 
@@ -720,25 +738,13 @@ const AdminDashboard: React.FC = () => {
                             {member.membershipStatus}
                           </span>
                         </td>
-                        <td className={`px-6 py-4 whitespace-nowrap text-sm ${
-                          isDarkMode ? 'text-gray-300' : 'text-gray-500'
-                        }`}>
-                          {member.membershipStartDate}
-                        </td>
-                        <td className={`px-6 py-4 whitespace-nowrap text-sm ${
-                          isDarkMode ? 'text-gray-300' : 'text-gray-500'
-                        }`}>
-                          {member.lastAttendance}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <Link
-                            to={`/admin/members/${member.id}`}
-                            className={`text-blue-600 hover:text-blue-900 ${
-                              isDarkMode ? 'text-blue-400 hover:text-blue-300' : ''
-                            }`}
-                          >
-                            View Details
-                          </Link>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+                            Last: {member.lastAttendance}
+                          </div>
+                          <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                            Total: {member.totalAttendance} visits
+                          </div>
                         </td>
                       </tr>
                     ))}
