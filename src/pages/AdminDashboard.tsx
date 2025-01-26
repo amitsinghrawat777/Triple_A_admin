@@ -201,7 +201,8 @@ const AdminDashboard: React.FC = () => {
             endDate = endDateTime.toLocaleDateString();
             
             // Update status based on end date and is_active flag
-            if (!membershipData.is_active || endDateTime < new Date()) {
+            const now = new Date();
+            if (!membershipData.is_active || endDateTime < now) {
               membershipStatus = 'expired';
             } else {
               membershipStatus = 'active';

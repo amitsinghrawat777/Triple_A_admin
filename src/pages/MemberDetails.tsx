@@ -357,11 +357,13 @@ const MemberDetails: React.FC = () => {
         end_date: Timestamp.fromDate(endDate),
         is_active: true,
         created_at: Timestamp.fromDate(new Date()),
-        updated_at: Timestamp.fromDate(new Date())
+        updated_at: Timestamp.fromDate(new Date()),
+        payment_status: 'completed',
+        payment_method: 'admin'
       };
 
       await setDoc(membershipRef, membershipData);
-      console.log('Membership updated successfully');
+      console.log('Membership updated successfully with end date:', endDate.toLocaleDateString());
       
       // Refresh member details and payment history
       await Promise.all([
