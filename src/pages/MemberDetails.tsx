@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { doc, getDoc, updateDoc, setDoc, Timestamp, collection, query, orderBy, getDocs, where, limit } from 'firebase/firestore';
 import { db } from '../config/firebase';
+import { useTheme } from '../context/ThemeContext';
 
 interface MemberDetails {
   id: string;
@@ -91,6 +92,7 @@ const MEMBERSHIP_PLANS = {
 };
 
 const MemberDetails: React.FC = () => {
+  const { isDarkMode } = useTheme();
   const { memberId } = useParams<{ memberId: string }>();
   const navigate = useNavigate();
   const [member, setMember] = useState<MemberDetails | null>(null);
@@ -460,307 +462,229 @@ const MemberDetails: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-50">
-        <div className="animate-spin rounded-full h-16 w-16 border-4 border-emerald-500 border-t-transparent"></div>
+      <div className={`flex justify-center items-center min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+        <div className="animate-spin rounded-full h-16 w-16 border-4 border-indigo-500 border-t-transparent"></div>
       </div>
     );
   }
 
-  if (error || !member) {
+  if (error) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-50">
-        <div className="bg-white p-8 rounded-lg shadow-lg">
+      <div className={`flex justify-center items-center min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+        <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} p-8 rounded-lg shadow-lg`}>
           <div className="text-red-500 text-lg font-medium mb-2">Error</div>
-          <div className="text-gray-600">{error || 'Member not found'}</div>
+          <div className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>{error}</div>
           <button 
-            onClick={() => navigate('/admin')}
-            className="mt-4 px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors"
+            onClick={() => fetchMemberDetails()}
+            className={`mt-4 px-4 py-2 ${
+              isDarkMode 
+                ? 'bg-indigo-500 hover:bg-indigo-400' 
+                : 'bg-indigo-600 hover:bg-indigo-500'
+            } text-white rounded-lg transition-colors`}
           >
-            Back to Dashboard
+            Try Again
           </button>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-4xl font-bold text-gray-900 mb-2">Member Details</h1>
-              <p className="text-gray-500">View and manage member information</p>
-            </div>
-            <Link
-              to="/admin"
-              className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-emerald-500 hover:bg-emerald-600 transition-colors"
-            >
-              Back to Dashboard
-            </Link>
-          </div>
-        </div>
+  if (!member) return null;
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Personal Information */}
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Personal Information</h2>
-            <div className="flex items-start space-x-4 mb-6">
-              <div className="flex-shrink-0">
-                {member.photoURL ? (
-                  <img 
-                    src={member.photoURL} 
-                    alt={member.name}
-                    className="h-24 w-24 rounded-full object-cover border-2 border-emerald-500"
-                  />
-                ) : (
-                  <div className="h-24 w-24 rounded-full bg-emerald-100 flex items-center justify-center border-2 border-emerald-500">
-                    <span className="text-2xl font-bold text-emerald-700">
-                      {member.name.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                )}
+  return (
+    <div className={`px-4 sm:px-6 lg:px-8 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+      {/* Header */}
+      <div className="sm:flex sm:items-center sm:justify-between">
+        <div>
+          <h1 className={`text-2xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            Member Details
+          </h1>
+          <p className={`mt-2 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+            View and manage member information
+          </p>
+        </div>
+        <div className="mt-4 sm:mt-0">
+          <Link
+            to="/admin"
+            className={`inline-flex items-center rounded-md px-3 py-2 text-sm font-semibold shadow-sm 
+              ${isDarkMode 
+                ? 'bg-gray-700 text-gray-100 hover:bg-gray-600' 
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+          >
+            Back to Dashboard
+          </Link>
+        </div>
+      </div>
+
+      {/* Member Profile Section */}
+      <div className={`mt-8 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow rounded-lg`}>
+        <div className="p-6">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              {member.photoURL ? (
+                <img className="h-24 w-24 rounded-full" src={member.photoURL} alt="" />
+              ) : (
+                <div className={`h-24 w-24 rounded-full flex items-center justify-center ${
+                  isDarkMode ? 'bg-gray-700' : 'bg-gray-200'
+                }`}>
+                  <span className={`text-3xl font-medium ${
+                    isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                  }`}>
+                    {member.name.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+              )}
+            </div>
+            <div className="ml-6">
+              <h2 className={`text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                {member.name}
+              </h2>
+              <div className={`mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                {member.email}
               </div>
-              <div className="flex-grow">
-                <div className="space-y-1">
-                  <h3 className="text-xl font-semibold text-gray-900">{member.name}</h3>
-                  {member.displayName && member.displayName !== member.name && (
-                    <p className="text-sm text-gray-500">Also known as: {member.displayName}</p>
-                  )}
-                </div>
-                <div className="mt-2 inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
-                  ${member.membershipStatus === 'active' ? 'bg-green-100 text-green-800' : 
-                    member.membershipStatus === 'expired' ? 'bg-red-100 text-red-800' : 
-                    'bg-yellow-100 text-yellow-800'}">
+              <div className="mt-2">
+                <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 
+                  ${member.membershipStatus === 'active'
+                    ? isDarkMode 
+                      ? 'bg-green-900 text-green-300'
+                      : 'bg-green-100 text-green-800'
+                    : member.membershipStatus === 'expired'
+                      ? isDarkMode
+                        ? 'bg-red-900 text-red-300'
+                        : 'bg-red-100 text-red-800'
+                      : isDarkMode
+                        ? 'bg-yellow-900 text-yellow-300'
+                        : 'bg-yellow-100 text-yellow-800'
+                  }`}
+                >
                   {member.membershipStatus}
-                </div>
+                </span>
               </div>
             </div>
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium text-gray-500">Email</label>
-                <p className="text-gray-900">{member.email}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Phone</label>
-                <p className="text-gray-900">{member.phone}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Address</label>
-                <p className="text-gray-900">{member.address}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Emergency Contact</label>
-                <p className="text-gray-900">{member.emergencyContact}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Join Date</label>
-                <p className="text-gray-900">{member.joinDate}</p>
-              </div>
+          </div>
+
+          {/* Personal Information */}
+          <div className="mt-8">
+            <h3 className={`text-lg font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+              Personal Information
+            </h3>
+            <div className={`mt-4 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+              <dl className="divide-y divide-gray-200">
+                <div className={`py-4 ${isDarkMode ? 'divide-gray-700' : 'divide-gray-200'}`}>
+                  <dt className={`text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Phone</dt>
+                  <dd className={`mt-1 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>{member.phone}</dd>
+                </div>
+                <div className={`py-4 ${isDarkMode ? 'divide-gray-700' : 'divide-gray-200'}`}>
+                  <dt className={`text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Join Date</dt>
+                  <dd className={`mt-1 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>{member.joinDate}</dd>
+                </div>
+                <div className={`py-4 ${isDarkMode ? 'divide-gray-700' : 'divide-gray-200'}`}>
+                  <dt className={`text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Address</dt>
+                  <dd className={`mt-1 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>{member.address}</dd>
+                </div>
+                <div className={`py-4 ${isDarkMode ? 'divide-gray-700' : 'divide-gray-200'}`}>
+                  <dt className={`text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Emergency Contact</dt>
+                  <dd className={`mt-1 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>{member.emergencyContact}</dd>
+                </div>
+              </dl>
             </div>
           </div>
 
           {/* Membership Information */}
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">Membership Details</h2>
-              <div className="space-x-2">
-                <button
-                  onClick={() => {
-                    setNewMembershipData({
-                      membershipType: member.membershipType === 'N/A' ? '' : member.membershipType,
-                      startDate: formatDateForInput(member.membershipStartDate),
-                      endDate: formatDateForInput(member.membershipEndDate)
-                    });
-                    setIsEditingMembership(true);
-                  }}
-                  className="px-3 py-1 text-sm text-emerald-600 hover:text-emerald-700 transition-colors"
-                >
-                  Edit
-                </button>
-                {member.membershipStatus === 'active' && (
-                  <button
-                    onClick={handleDiscontinueMembership}
-                    className="px-3 py-1 text-sm text-red-600 hover:text-red-700 transition-colors"
-                  >
-                    Discontinue
-                  </button>
-                )}
-              </div>
+          <div className="mt-8">
+            <div className="flex items-center justify-between">
+              <h3 className={`text-lg font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                Membership Details
+              </h3>
+              <button
+                onClick={() => setIsEditingMembership(true)}
+                className={`px-4 py-2 rounded-md text-sm font-medium
+                  ${isDarkMode
+                    ? 'bg-indigo-500 text-white hover:bg-indigo-400'
+                    : 'bg-indigo-600 text-white hover:bg-indigo-500'
+                  }`}
+              >
+                Update Membership
+              </button>
             </div>
-            
-            {isEditingMembership ? (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-2">Select Plan</label>
-                  <div className="grid grid-cols-1 gap-4">
-                    {Object.values(MEMBERSHIP_PLANS).map((plan) => (
-                      <div 
-                        key={plan.id}
-                        className={`p-4 border rounded-lg cursor-pointer transition-all ${
-                          newMembershipData.membershipType === plan.id
-                            ? 'border-emerald-500 bg-emerald-50'
-                            : 'border-gray-200 hover:border-emerald-300'
-                        }`}
-                        onClick={() => setNewMembershipData(prev => ({
-                          ...prev,
-                          membershipType: plan.id,
-                          amount: plan.amount
-                        }))}
-                      >
-                        <div className="flex justify-between items-center mb-2">
-                          <h3 className="font-medium text-gray-900">{plan.name}</h3>
-                          <span className="text-emerald-600 font-semibold">₹{plan.amount}</span>
-                        </div>
-                        <ul className="text-sm text-gray-600 space-y-1">
-                          {plan.features.map((feature, index) => (
-                            <li key={index} className="flex items-center">
-                              <svg className="w-4 h-4 text-emerald-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                              </svg>
-                              {feature}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
-                  </div>
+            <div className={`mt-4 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+              <dl className="divide-y divide-gray-200">
+                <div className={`py-4 ${isDarkMode ? 'divide-gray-700' : 'divide-gray-200'}`}>
+                  <dt className={`text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Plan</dt>
+                  <dd className={`mt-1 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>{member.membershipType}</dd>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-500">Start Date</label>
-                  <input
-                    type="date"
-                    value={newMembershipData.startDate}
-                    onChange={(e) => {
-                      const startDate = new Date(e.target.value);
-                      const selectedPlan = Object.values(MEMBERSHIP_PLANS).find(
-                        plan => plan.id === newMembershipData.membershipType
-                      );
-                      
-                      let endDate = new Date(startDate);
-                      if (selectedPlan) {
-                        endDate.setMonth(endDate.getMonth() + selectedPlan.duration);
-                      }
-                      
-                      setNewMembershipData(prev => ({
-                        ...prev,
-                        startDate: e.target.value,
-                        endDate: endDate.toISOString().split('T')[0]
-                      }));
-                    }}
-                    min={new Date().toISOString().split('T')[0]}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                  />
+                <div className={`py-4 ${isDarkMode ? 'divide-gray-700' : 'divide-gray-200'}`}>
+                  <dt className={`text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Start Date</dt>
+                  <dd className={`mt-1 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>{member.membershipStartDate}</dd>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-500">End Date</label>
-                  <input
-                    type="date"
-                    value={newMembershipData.endDate}
-                    disabled
-                    className="mt-1 block w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50"
-                  />
-                  <p className="mt-1 text-sm text-gray-500">End date is automatically calculated based on the plan duration</p>
+                <div className={`py-4 ${isDarkMode ? 'divide-gray-700' : 'divide-gray-200'}`}>
+                  <dt className={`text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>End Date</dt>
+                  <dd className={`mt-1 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>{member.membershipEndDate}</dd>
                 </div>
-                <div className="flex justify-end space-x-3 mt-6">
-                  <button
-                    onClick={() => setIsEditingMembership(false)}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-800 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleUpdateMembership}
-                    className="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors text-sm font-medium"
-                  >
-                    Save Changes
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Current Plan</label>
-                  <p className="text-gray-900">{member.membershipType}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Start Date</label>
-                  <p className="text-gray-900">{member.membershipStartDate}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">End Date</label>
-                  <p className="text-gray-900">{member.membershipEndDate}</p>
-                </div>
-              </div>
-            )}
+              </dl>
+            </div>
           </div>
 
           {/* Attendance Information */}
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Attendance History</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium text-gray-500">Total Visits</label>
-                <p className="text-gray-900">{member.totalAttendance}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Last Visit</label>
-                <p className="text-gray-900">{member.lastAttendance}</p>
-              </div>
-              <div className="mt-4">
-                <h3 className="text-sm font-medium text-gray-500 mb-2">Recent Check-ins</h3>
-                <div className="max-h-64 overflow-y-auto">
-                  {attendance.map(record => (
-                    <div key={record.id} className="py-2 border-b border-gray-100 last:border-0">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-900">{record.date}</span>
-                        <div className="text-xs text-gray-500">
-                          <span>{record.checkInTime}</span>
-                          {record.checkOutTime !== 'N/A' && (
-                            <span> - {record.checkOutTime}</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+          <div className="mt-8">
+            <h3 className={`text-lg font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+              Attendance History
+            </h3>
+            <div className={`mt-4 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+              <dl className="divide-y divide-gray-200">
+                <div className={`py-4 ${isDarkMode ? 'divide-gray-700' : 'divide-gray-200'}`}>
+                  <dt className={`text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Total Visits</dt>
+                  <dd className={`mt-1 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>{member.totalAttendance}</dd>
                 </div>
-              </div>
+                <div className={`py-4 ${isDarkMode ? 'divide-gray-700' : 'divide-gray-200'}`}>
+                  <dt className={`text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Last Visit</dt>
+                  <dd className={`mt-1 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>{member.lastAttendance}</dd>
+                </div>
+              </dl>
             </div>
           </div>
 
           {/* Payment History */}
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Payment History</h2>
-            <div className="overflow-hidden">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+          <div className="mt-8">
+            <h3 className={`text-lg font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+              Payment History
+            </h3>
+            <div className="mt-4 overflow-hidden">
+              <table className={`min-w-full divide-y ${isDarkMode ? 'divide-gray-700' : 'divide-gray-200'}`}>
+                <thead className={isDarkMode ? 'bg-gray-700' : 'bg-gray-50'}>
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Plan</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th scope="col" className={`px-6 py-3 text-left text-xs font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>Date</th>
+                    <th scope="col" className={`px-6 py-3 text-left text-xs font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>Plan</th>
+                    <th scope="col" className={`px-6 py-3 text-left text-xs font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>Amount</th>
+                    <th scope="col" className={`px-6 py-3 text-left text-xs font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>Status</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className={`divide-y ${isDarkMode ? 'divide-gray-700' : 'divide-gray-200'}`}>
                   {paymentHistory.map((payment) => (
-                    <tr key={payment.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{payment.date}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{payment.plan_name}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">₹{payment.amount}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          payment.payment_status === 'completed' 
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}>
+                    <tr key={payment.id} className={isDarkMode ? 'bg-gray-800' : 'bg-white'}>
+                      <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>{payment.date}</td>
+                      <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>{payment.plan_name}</td>
+                      <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>₹{payment.amount}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 
+                          ${payment.payment_status === 'completed'
+                            ? isDarkMode 
+                              ? 'bg-green-900 text-green-300'
+                              : 'bg-green-100 text-green-800'
+                            : isDarkMode
+                              ? 'bg-yellow-900 text-yellow-300'
+                              : 'bg-yellow-100 text-yellow-800'
+                          }`}
+                        >
                           {payment.payment_status}
                         </span>
                       </td>
                     </tr>
                   ))}
                   {paymentHistory.length === 0 && (
-                    <tr>
-                      <td colSpan={4} className="px-6 py-4 text-center text-sm text-gray-500">
+                    <tr className={isDarkMode ? 'bg-gray-800' : 'bg-white'}>
+                      <td colSpan={4} className={`px-6 py-4 text-sm text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                         No payment history available
                       </td>
                     </tr>
@@ -768,12 +692,6 @@ const MemberDetails: React.FC = () => {
                 </tbody>
               </table>
             </div>
-          </div>
-
-          {/* Notes Section */}
-          <div className="lg:col-span-3 bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Notes</h2>
-            <p className="text-gray-600 whitespace-pre-line">{member.notes}</p>
           </div>
         </div>
       </div>

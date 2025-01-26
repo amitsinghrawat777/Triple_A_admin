@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { collection, getDocs, doc, getDoc, query, orderBy, where, Timestamp, limit, QueryDocumentSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { DocumentData } from 'firebase/firestore';
+import { useTheme } from '../context/ThemeContext';
 
 interface Member {
   id: string;
@@ -74,6 +75,7 @@ interface AttendanceData {
 }
 
 const AdminDashboard: React.FC = () => {
+  const { isDarkMode } = useTheme();
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -368,222 +370,209 @@ const AdminDashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Admin Dashboard</h1>
-          <p className="text-gray-500">Manage your members and view statistics</p>
+    <div className={`px-4 sm:px-6 lg:px-8 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+      <div className="sm:flex sm:items-center">
+        <div className="sm:flex-auto">
+          <h1 className={`text-2xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            Admin Dashboard
+          </h1>
+          <p className={`mt-2 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-700'}`}>
+            Manage your members and view statistics
+          </p>
         </div>
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 transition-all hover:shadow-md">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-700">Active Members</h2>
-                <p className="text-4xl font-bold text-emerald-600 mt-2">{stats.active}</p>
-              </div>
-              <div className="p-3 bg-emerald-100 rounded-lg">
-                <svg className="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 transition-all hover:shadow-md">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-700">Expired Memberships</h2>
-                <p className="text-4xl font-bold text-red-600 mt-2">{stats.expired}</p>
-              </div>
-              <div className="p-3 bg-red-100 rounded-lg">
-                <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 transition-all hover:shadow-md">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-700">Pending Members</h2>
-                <p className="text-4xl font-bold text-yellow-600 mt-2">{stats.pending}</p>
-              </div>
-              <div className="p-3 bg-yellow-100 rounded-lg">
-                <svg className="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" />
-                </svg>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-          <div className="p-6 border-b border-gray-100">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div className="relative flex-1 max-w-md">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      {/* Stats Cards */}
+      <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {/* Active Members Card */}
+        <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} overflow-hidden shadow rounded-lg`}>
+          <div className="p-5">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className={`h-12 w-12 rounded-md flex items-center justify-center ${isDarkMode ? 'bg-green-900' : 'bg-green-100'}`}>
+                  <svg className={`h-6 w-6 ${isDarkMode ? 'text-green-400' : 'text-green-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                   </svg>
                 </div>
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className={`text-sm font-medium truncate ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Active Members</dt>
+                  <dd className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{stats.active}</dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Expired Memberships Card */}
+        <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} overflow-hidden shadow rounded-lg`}>
+          <div className="p-5">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className={`h-12 w-12 rounded-md flex items-center justify-center ${isDarkMode ? 'bg-red-900' : 'bg-red-100'}`}>
+                  <svg className={`h-6 w-6 ${isDarkMode ? 'text-red-400' : 'text-red-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className={`text-sm font-medium truncate ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Expired Memberships</dt>
+                  <dd className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{stats.expired}</dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Pending Members Card */}
+        <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} overflow-hidden shadow rounded-lg`}>
+          <div className="p-5">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className={`h-12 w-12 rounded-md flex items-center justify-center ${isDarkMode ? 'bg-yellow-900' : 'bg-yellow-100'}`}>
+                  <svg className={`h-6 w-6 ${isDarkMode ? 'text-yellow-400' : 'text-yellow-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" />
+                  </svg>
+                </div>
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className={`text-sm font-medium truncate ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Pending Members</dt>
+                  <dd className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{stats.pending}</dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Search and Table Section */}
+      <div className={`mt-8 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow rounded-lg`}>
+        <div className="p-4 sm:p-6 lg:p-8">
+          <div className="sm:flex sm:items-center">
+            <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
+              <div className="relative rounded-md shadow-sm">
                 <input
                   type="text"
-                  placeholder="Search members by name, email, or phone..."
                   value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  className="pl-10 w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-colors"
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search members by name, email, or phone..."
+                  className={`block w-full rounded-md border-0 py-1.5 pr-10 ring-1 ring-inset 
+                    ${isDarkMode 
+                      ? 'bg-gray-700 text-white placeholder-gray-400 ring-gray-600 focus:ring-indigo-500' 
+                      : 'bg-white text-gray-900 placeholder-gray-400 ring-gray-300 focus:ring-indigo-600'
+                    } focus:ring-2 focus:ring-inset sm:text-sm sm:leading-6`}
                 />
               </div>
-              <button 
-                onClick={() => fetchMembers()}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-emerald-500 hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-colors"
+            </div>
+            <div className="mt-4 sm:mt-0 sm:ml-4">
+              <button
+                onClick={() => window.location.reload()}
+                className={`inline-flex items-center rounded-md px-3 py-2 text-sm font-semibold shadow-sm 
+                  ${isDarkMode 
+                    ? 'bg-indigo-500 text-white hover:bg-indigo-400' 
+                    : 'bg-indigo-600 text-white hover:bg-indigo-500'
+                  }`}
               >
-                <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
                 Refresh
               </button>
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
-                    onClick={() => handleSort('name')}
-                  >
-                    <div className="flex items-center space-x-1">
-                      <span>Name</span>
-                      {sortField === 'name' && (
-                        <svg className={`w-4 h-4 ${sortDirection === 'asc' ? '' : 'transform rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                        </svg>
-                      )}
-                    </div>
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Membership</th>
-                  <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
-                    onClick={() => handleSort('membershipStatus')}
-                  >
-                    <div className="flex items-center space-x-1">
-                      <span>Status</span>
-                      {sortField === 'membershipStatus' && (
-                        <svg className={`w-4 h-4 ${sortDirection === 'asc' ? '' : 'transform rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                        </svg>
-                      )}
-                    </div>
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Attendance</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {paginatedMembers.map((member) => (
-                  <tr key={member.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center space-x-3">
-                        <div className="flex-shrink-0">
-                          {member.photoURL ? (
-                            <img 
-                              src={member.photoURL} 
-                              alt={member.name}
-                              className="h-10 w-10 rounded-full object-cover"
-                            />
-                          ) : (
-                            <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center">
-                              <span className="text-lg font-medium text-emerald-700">
-                                {member.name.charAt(0).toUpperCase()}
-                              </span>
+          <div className="mt-8 flow-root">
+            <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
+              <div className="inline-block min-w-full py-2 align-middle">
+                <table className="min-w-full divide-y divide-gray-300">
+                  <thead>
+                    <tr>
+                      <th scope="col" className={`py-3.5 pl-4 pr-3 text-left text-sm font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+                        NAME
+                      </th>
+                      <th scope="col" className={`px-3 py-3.5 text-left text-sm font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+                        CONTACT
+                      </th>
+                      <th scope="col" className={`px-3 py-3.5 text-left text-sm font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+                        MEMBERSHIP
+                      </th>
+                      <th scope="col" className={`px-3 py-3.5 text-left text-sm font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+                        STATUS
+                      </th>
+                      <th scope="col" className={`px-3 py-3.5 text-left text-sm font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+                        ATTENDANCE
+                      </th>
+                      <th scope="col" className={`relative py-3.5 pl-3 pr-4 sm:pr-6 ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+                        <span className="sr-only">Actions</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className={`${isDarkMode ? 'divide-gray-700' : 'divide-gray-200'}`}>
+                    {members.map((member) => (
+                      <tr key={member.id} className={isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}>
+                        <td className={`whitespace-nowrap py-4 pl-4 pr-3 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+                          <div className="flex items-center">
+                            <div className="h-10 w-10 flex-shrink-0">
+                              {member.photoURL ? (
+                                <img className="h-10 w-10 rounded-full" src={member.photoURL} alt="" />
+                              ) : (
+                                <div className={`h-10 w-10 rounded-full flex items-center justify-center ${isDarkMode ? 'bg-gray-600' : 'bg-gray-200'}`}>
+                                  <span className={`text-lg font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                    {member.name.charAt(0).toUpperCase()}
+                                  </span>
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">{member.name}</div>
-                          {member.displayName && member.displayName !== member.name && (
-                            <div className="text-sm text-gray-500">{member.displayName}</div>
-                          )}
-                          <div className="text-sm text-gray-500">{member.email}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{member.phone}</div>
-                      <div className="text-sm text-gray-500">Joined: {member.joinDate}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{member.membershipType}</div>
-                      <div className="text-sm text-gray-500">
-                        {member.membershipEndDate !== 'N/A' ? `Expires: ${member.membershipEndDate}` : 'No active plan'}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full 
-                        ${member.membershipStatus === 'active' ? 'bg-green-100 text-green-800' : 
-                          member.membershipStatus === 'expired' ? 'bg-red-100 text-red-800' : 
-                          'bg-yellow-100 text-yellow-800'}`}>
-                        {member.membershipStatus}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">Total: {member.totalAttendance}</div>
-                      <div className="text-sm text-gray-500">Last: {member.lastAttendance}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <Link 
-                        to={`/admin/members/${member.id}`}
-                        className="text-emerald-600 hover:text-emerald-900 transition-colors"
-                      >
-                        View Details
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="px-6 py-4 border-t border-gray-100">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <p className="text-sm text-gray-700">
-                  Showing <span className="font-medium">{((currentPage - 1) * itemsPerPage) + 1}</span> to{' '}
-                  <span className="font-medium">
-                    {Math.min(currentPage * itemsPerPage, filteredAndSortedMembers.length)}
-                  </span>{' '}
-                  of <span className="font-medium">{filteredAndSortedMembers.length}</span> results
-                </p>
-              </div>
-              <div className="flex justify-end">
-                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                    disabled={currentPage === 1}
-                    className="relative inline-flex items-center px-4 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                  </button>
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                    disabled={currentPage === totalPages}
-                    className="relative inline-flex items-center px-4 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                </nav>
+                            <div className="ml-4">
+                              <div className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{member.name}</div>
+                              <div className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{member.email}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className={`whitespace-nowrap px-3 py-4 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+                          <div>{member.phone}</div>
+                          <div className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Joined: {member.joinDate}</div>
+                        </td>
+                        <td className={`whitespace-nowrap px-3 py-4 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+                          <div>{member.membershipType}</div>
+                          <div className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                            {member.membershipEndDate}
+                          </div>
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm">
+                          <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 
+                            ${member.membershipStatus === 'active'
+                              ? isDarkMode 
+                                ? 'bg-green-900 text-green-300'
+                                : 'bg-green-100 text-green-800'
+                              : member.membershipStatus === 'expired'
+                                ? isDarkMode
+                                  ? 'bg-red-900 text-red-300'
+                                  : 'bg-red-100 text-red-800'
+                                : isDarkMode
+                                  ? 'bg-yellow-900 text-yellow-300'
+                                  : 'bg-yellow-100 text-yellow-800'
+                            }`}
+                          >
+                            {member.membershipStatus}
+                          </span>
+                        </td>
+                        <td className={`whitespace-nowrap px-3 py-4 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+                          <div>Total: {member.totalAttendance}</div>
+                          <div className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Last: {member.lastAttendance}</div>
+                        </td>
+                        <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
+                          <Link
+                            to={`/admin/members/${member.id}`}
+                            className={`text-indigo-600 hover:text-indigo-900 ${isDarkMode ? 'text-indigo-400 hover:text-indigo-300' : ''}`}
+                          >
+                            View Details
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
