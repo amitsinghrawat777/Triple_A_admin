@@ -7,6 +7,17 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.admin == true;
+    }
+
+    // Allow admins to read and write all data
+    match /{document=**} {
+      allow read, write: if isAdmin();
+      allow read: if isAuthenticated();
+    }
+
     // Helper function to check if user is accessing their own data
     function isUserOwned(userId) {
       return isAuthenticated() && request.auth.uid == userId;
@@ -36,61 +47,63 @@ service cloud.firestore {
     // Allow users to read and write their own data
     match /users/{userId} {
       allow read: if isAuthenticated();
-      allow write: if isUserOwned(userId);
+      allow write: if isUserOwned(userId) || isAdmin();
       
       // Allow users to update their own membership
       match /membership/{document=**} {
-        allow read: if isUserOwned(userId);
-        allow write: if isUserOwned(userId);
+        allow read: if isUserOwned(userId) || isAdmin();
+        allow write: if isUserOwned(userId) || isAdmin();
       }
     }
     
     // Allow users to read and write their own payments
     match /payments/{paymentId} {
       allow read: if isAuthenticated() && 
-        resource.data.userId == request.auth.uid;
+        (resource.data.userId == request.auth.uid || isAdmin());
       
       // Allow creating new payments
       allow create: if isAuthenticated() && 
-        isValidPayment() &&
-        hasValidMetadata();
+        (isValidPayment() || isAdmin());
       
-      // Never allow updates or deletes
-      allow update, delete: if false;
+      // Only allow admin to update or delete
+      allow update, delete: if isAdmin();
     }
     
     // Allow users to read and write their own profile
     match /profiles/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
     }
 
     // Allow users to read their own membership details
     match /memberships/{membershipId} {
-      allow read: if request.auth != null && resource.data.user_id == request.auth.uid;
-      allow create: if true;  // Temporarily allow creation for testing
-      allow update: if request.auth != null && resource.data.user_id == request.auth.uid;
-      allow delete: if request.auth != null && resource.data.user_id == request.auth.uid;
+      allow read: if isAuthenticated() && (resource.data.user_id == request.auth.uid || isAdmin());
+      allow create: if isAdmin();
+      allow update: if isAuthenticated() && (resource.data.user_id == request.auth.uid || isAdmin());
+      allow delete: if isAdmin();
     }
 
     // Payment history collection (for querying)
     match /payment-history/{userId} {
-      allow read: if isUserOwned(userId);
+      allow read: if isUserOwned(userId) || isAdmin();
       
       match /transactions/{transactionId} {
-        allow read: if isUserOwned(userId);
+        allow read: if isUserOwned(userId) || isAdmin();
       }
     }
 
     match /attendance/{document} {
-      allow read, write: if request.auth != null && 
+      allow read, write: if isAuthenticated() && 
         (request.auth.uid == resource.data.userId || 
-         request.auth.uid == request.resource.data.userId);
+         request.auth.uid == request.resource.data.userId || 
+         isAdmin());
     }
+    
     match /attendanceStats/{document} {
-      allow read, write: if request.auth != null && 
+      allow read, write: if isAuthenticated() && 
         (request.auth.uid == resource.data.userId || 
-         request.auth.uid == request.resource.data.userId);
+         request.auth.uid == request.resource.data.userId || 
+         isAdmin());
     }
   }
 }

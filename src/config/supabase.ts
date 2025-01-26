@@ -15,4 +15,12 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     detectSessionInUrl: true
   }
-}); 
+});
+
+export async function getAuthToken(): Promise<string | null> {
+  const { data: { session }, error } = await supabase.auth.getSession();
+  if (error || !session) {
+    return null;
+  }
+  return session.access_token;
+} 

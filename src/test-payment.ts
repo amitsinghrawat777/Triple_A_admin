@@ -1,4 +1,13 @@
-import { supabase, getAuthToken } from './config/supabase';
+import { auth } from './config/firebase';
+import { db } from './config/firebase';
+import { collection, query, where, getDocs, limit } from 'firebase/firestore';
+
+interface MembershipPlan {
+  id: string;
+  name: string;
+  price: number;
+  status: 'active' | 'inactive';
+}
 
 async function updateStatus(message: string, type: 'status' | 'error' | 'success' = 'status') {
   const element = document.getElementById(type);
@@ -13,33 +22,35 @@ async function testPaymentIntegration() {
     updateStatus('Checking authentication...');
     
     // 1. Get the current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
+    const user = auth.currentUser;
+    if (!user) {
       throw new Error('Please login to continue');
     }
 
-    // 2. Get available plans
-    updateStatus('Fetching membership plans...');
-    const { data: plans, error: plansError } = await supabase
-      .from('membership_plans')
-      .select('id, name, price')
-      .eq('status', 'active')
-      .limit(1);
-
-    if (plansError || !plans.length) {
-      throw new Error('No active membership plans found');
-    }
-
-    const plan = plans[0]; // Use the first active plan
-    updateStatus(`Creating order for ${plan.name}...`);
-
-    // Get auth token
-    const authToken = await getAuthToken();
+    // 2. Get auth token
+    const authToken = await user.getIdToken();
     if (!authToken) {
       throw new Error('Authentication token not found');
     }
 
-    // 3. Create an order
+    // 3. Get available plans
+    updateStatus('Fetching membership plans...');
+    const plansRef = collection(db, 'membership_plans');
+    const q = query(plansRef, where('status', '==', 'active'), limit(1));
+    const querySnapshot = await getDocs(q);
+    
+    if (querySnapshot.empty) {
+      throw new Error('No active membership plans found');
+    }
+
+    const plan: MembershipPlan = {
+      id: querySnapshot.docs[0].id,
+      ...(querySnapshot.docs[0].data() as Omit<MembershipPlan, 'id'>)
+    };
+    
+    updateStatus(`Creating order for ${plan.name}...`);
+
+    // 4. Create an order
     const orderResponse = await fetch('https://gjuecyugpchcwznewohb.supabase.co/functions/v1/payment-functions', {
       method: 'POST',
       headers: {
@@ -50,7 +61,7 @@ async function testPaymentIntegration() {
         path: 'create-order',
         amount: plan.price,
         planId: plan.id,
-        userId: user.id
+        userId: user.uid
       })
     });
 
@@ -62,7 +73,7 @@ async function testPaymentIntegration() {
     const { orderId } = await orderResponse.json();
     updateStatus('Initializing payment...');
 
-    // 4. Initialize Razorpay payment
+    // 5. Initialize Razorpay payment
     const options = {
       key: 'rzp_test_GEZQfBnCrf1uyR',
       amount: plan.price * 100, // amount in paise
@@ -73,9 +84,9 @@ async function testPaymentIntegration() {
       handler: async function(response: any) {
         try {
           updateStatus('Payment successful, verifying...', 'success');
-          const verifyToken = await getAuthToken();
+          const verifyToken = await user.getIdToken();
 
-          // 5. Verify payment
+          // 6. Verify payment
           const verifyResponse = await fetch('https://gjuecyugpchcwznewohb.supabase.co/functions/v1/payment-functions', {
             method: 'POST',
             headers: {
@@ -87,7 +98,7 @@ async function testPaymentIntegration() {
               paymentId: response.razorpay_payment_id,
               orderId: response.razorpay_order_id,
               signature: response.razorpay_signature,
-              userId: user.id
+              userId: user.uid
             })
           });
 
@@ -110,9 +121,9 @@ async function testPaymentIntegration() {
         }
       },
       prefill: {
-        name: user.user_metadata?.full_name || '',
+        name: user.displayName || '',
         email: user.email || '',
-        contact: user.user_metadata?.phone || ''
+        contact: user.phoneNumber || ''
       },
       theme: {
         color: '#10B981'

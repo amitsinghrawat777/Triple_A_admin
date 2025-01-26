@@ -1,35 +1,30 @@
 import React from 'react';
-import { Outlet, useLocation, Navigate } from 'react-router-dom';
-import Header from './Header';
-import Navigation from './Navigation';
-import { useAuth } from '../context/AuthContext';
+import { useLocation } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 
-export default function Layout() {
-  const { signOut, user } = useAuth();
+interface LayoutProps {
+  children?: React.ReactNode;
+}
+
+export default function Layout({ children }: LayoutProps) {
   const { isDarkMode } = useTheme();
   const { pathname } = useLocation();
-
-  // Redirect to /dashboard if at root path
-  if (pathname === '/' && user) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  const showHeaderAndNav = !['/profile', '/membership', '/achievements', '/profile/edit', '/settings', '/plans'].some(path => 
-    pathname === path
-  );
 
   return (
     <div className={`min-h-screen flex flex-col ${
       isDarkMode ? 'bg-dark-bg text-dark-text' : 'bg-gray-50 text-gray-900'
     }`}>
-      {showHeaderAndNav && <Header />}
-      <main className={`flex-1 ${showHeaderAndNav ? 'pb-24 pt-16 px-4 md:px-6 lg:px-8' : ''} max-w-7xl mx-auto w-full`}>
-        <Outlet />
+      {/* Admin Header */}
+      <header className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <h1 className="text-xl font-semibold text-gray-900">Triple A Admin</h1>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="flex-1 py-6">
+        {children}
       </main>
-      {showHeaderAndNav && (
-        <Navigation onLogout={signOut} />
-      )}
     </div>
   );
 }
