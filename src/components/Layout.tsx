@@ -46,8 +46,19 @@ export default function Layout({ children }: LayoutProps) {
       {/* Admin Header */}
       <header className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-sm`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <h1 className={`text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-            Triple A Admin
+          <h1 className={`text-xl font-semibold flex items-center gap-2`}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="w-6 h-6 text-emerald-600">
+              <path d="m6.5 6.5 11 11"></path>
+              <path d="m21 21-1-1"></path>
+              <path d="m3 3 1 1"></path>
+              <path d="m18 22 4-4"></path>
+              <path d="m2 6 4-4"></path>
+              <path d="m3 10 7-7"></path>
+              <path d="m14 21 7-7"></path>
+            </svg>
+            <span className="text-lg md:text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-blue-600">Triple A</span>
+            <span className="text-shadow-600 font-bold">-</span>
+            <span className="text-amber-600 font-bold">Admin</span>
           </h1>
           
           <div className="flex items-center space-x-4">

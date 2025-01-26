@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { doc, getDoc, updateDoc, setDoc, Timestamp, collection, query, orderBy, getDocs, where, limit } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, setDoc, Timestamp, collection, query, orderBy, getDocs, where, limit, writeBatch } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useTheme } from '../context/ThemeContext';
 import { toast } from 'react-hot-toast';
 import { auth } from '../config/firebase';
+import { ProfileSkeleton, MembershipCardSkeleton, PaymentHistorySkeleton } from '../components/Skeletons';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 interface MemberDetails {
   id: string;
@@ -120,6 +122,9 @@ const MemberDetails: React.FC = () => {
     height: 0,
     weight: 0
   });
+
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchMemberDetails();
@@ -492,6 +497,59 @@ const MemberDetails: React.FC = () => {
     }
   };
 
+  const handleDeleteMember = async () => {
+    try {
+      setIsDeleting(true);
+      
+      // Check admin status first
+      const token = await auth.currentUser?.getIdTokenResult();
+      if (!token?.claims?.admin) {
+        toast.error('Only admin users can delete members');
+        return;
+      }
+
+      if (!memberId) {
+        toast.error('Member ID is required');
+        return;
+      }
+
+      // Delete all related documents
+      const batch = writeBatch(db);
+
+      // Delete profile
+      const profileRef = doc(db, 'profiles', memberId);
+      batch.delete(profileRef);
+
+      // Delete memberships
+      const membershipsRef = collection(db, 'memberships');
+      const membershipQuery = query(membershipsRef, where('userId', '==', memberId));
+      const membershipSnap = await getDocs(membershipQuery);
+      membershipSnap.forEach(doc => {
+        batch.delete(doc.ref);
+      });
+
+      // Delete attendance records
+      const attendanceRef = collection(db, 'attendance');
+      const attendanceQuery = query(attendanceRef, where('userId', '==', memberId));
+      const attendanceSnap = await getDocs(attendanceQuery);
+      attendanceSnap.forEach(doc => {
+        batch.delete(doc.ref);
+      });
+
+      // Commit the batch
+      await batch.commit();
+
+      toast.success('Member deleted successfully');
+      navigate('/admin');
+    } catch (error) {
+      console.error('Error deleting member:', error);
+      toast.error('Failed to delete member. Please try again.');
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteModalOpen(false);
+    }
+  };
+
   const renderMembershipForm = () => {
     if (!isEditingMembership) {
       return (
@@ -667,10 +725,53 @@ const MemberDetails: React.FC = () => {
     );
   };
 
+  const renderDeleteButton = () => (
+    <button
+      onClick={() => setIsDeleteModalOpen(true)}
+      className={`px-4 py-2 rounded-md text-sm font-medium ${
+        isDarkMode 
+          ? 'bg-red-600 text-white hover:bg-red-500' 
+          : 'bg-red-600 text-white hover:bg-red-700'
+      }`}
+    >
+      <div className="flex items-center space-x-2">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+          <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+        </svg>
+        <span>Delete Member</span>
+      </div>
+    </button>
+  );
+
   if (loading) {
     return (
-      <div className={`flex justify-center items-center min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
-        <div className="animate-spin rounded-full h-16 w-16 border-4 border-indigo-500 border-t-transparent"></div>
+      <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+          {/* Header Skeleton */}
+          <div className="mb-4 sm:mb-8">
+            <div className="flex items-center text-sm overflow-x-auto whitespace-nowrap pb-2">
+              <div className={`h-4 w-20 rounded animate-pulse ${isDarkMode ? 'bg-gray-800' : 'bg-gray-300'}`} />
+              <span className={`mx-2 ${isDarkMode ? 'text-gray-600' : 'text-gray-400'}`}>/</span>
+              <div className={`h-4 w-32 rounded animate-pulse ${isDarkMode ? 'bg-gray-800' : 'bg-gray-300'}`} />
+            </div>
+            <div className={`mt-2 h-8 w-48 rounded animate-pulse ${isDarkMode ? 'bg-gray-800' : 'bg-gray-300'}`} />
+          </div>
+
+          {/* Main Content Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-8">
+            {/* Left Column - Profile Skeleton */}
+            <div className="lg:col-span-1">
+              <ProfileSkeleton />
+            </div>
+
+            {/* Right Column - Membership & Activity Skeletons */}
+            <div className="lg:col-span-2 space-y-4 sm:space-y-8">
+              <MembershipCardSkeleton />
+              <PaymentHistorySkeleton />
+              <PaymentHistorySkeleton /> {/* For attendance history */}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -700,15 +801,17 @@ const MemberDetails: React.FC = () => {
 
   return (
     <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
-      {/* Header with breadcrumb */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         <div className="mb-4 sm:mb-8">
-          <div className="flex items-center text-sm overflow-x-auto whitespace-nowrap pb-2">
-            <Link to="/admin" className={`${isDarkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'}`}>
-              Dashboard
-            </Link>
-            <span className={`mx-2 ${isDarkMode ? 'text-gray-600' : 'text-gray-400'}`}>/</span>
-            <span className={`${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Member Details</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center text-sm overflow-x-auto whitespace-nowrap pb-2">
+              <Link to="/admin" className={`${isDarkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'}`}>
+                Dashboard
+              </Link>
+              <span className={`mx-2 ${isDarkMode ? 'text-gray-600' : 'text-gray-400'}`}>/</span>
+              <span className={`${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Member Details</span>
+            </div>
+            {renderDeleteButton()}
           </div>
           <h1 className={`mt-2 text-2xl sm:text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
             Member Profile
@@ -910,6 +1013,18 @@ const MemberDetails: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <ConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleDeleteMember}
+        title="Delete Member"
+        message="Are you sure you want to delete this member? This action cannot be undone and will remove all associated data including membership and attendance records."
+        confirmText="Delete Member"
+        cancelText="Cancel"
+        isLoading={isDeleting}
+        isDanger={true}
+      />
     </div>
   );
 };

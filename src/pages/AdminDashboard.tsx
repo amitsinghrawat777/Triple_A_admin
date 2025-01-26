@@ -5,6 +5,8 @@ import { db } from '../config/firebase';
 import { DocumentData } from 'firebase/firestore';
 import { useTheme } from '../context/ThemeContext';
 import { toast } from 'react-hot-toast';
+import { TableRowSkeleton, StatCardSkeleton } from '../components/Skeletons';
+import CreateUserModal from '../components/CreateUserModal';
 
 interface Member {
   id: string;
@@ -80,6 +82,9 @@ const AdminDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestions, setSuggestions] = useState<{ value: string; type: string }[]>([]);
+  const searchRef = React.useRef<HTMLDivElement>(null);
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [currentPage, setCurrentPage] = useState(1);
@@ -89,6 +94,7 @@ const AdminDashboard: React.FC = () => {
     expiredMemberships: 0,
     pendingMembers: 0
   });
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const fetchMembershipData = async (userId: string) => {
     try {
@@ -281,11 +287,16 @@ const AdminDashboard: React.FC = () => {
 
   const filteredAndSortedMembers = useMemo(() => {
     return members
-      .filter(member => 
-        member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        member.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        member.phone.toLowerCase().includes(searchTerm.toLowerCase())
-      )
+      .filter(member => {
+        const searchLower = searchTerm.toLowerCase().trim();
+        return (
+          (member.name && member.name.toLowerCase().includes(searchLower)) ||
+          (member.email && member.email.toLowerCase().includes(searchLower)) ||
+          (member.phone && member.phone.toLowerCase().includes(searchLower)) ||
+          (member.membershipStatus && member.membershipStatus.toLowerCase().includes(searchLower)) ||
+          (member.membershipType && member.membershipType.toLowerCase().includes(searchLower))
+        );
+      })
       .sort((a, b) => {
         const aValue = String(a[sortField]).toLowerCase();
         const bValue = String(b[sortField]).toLowerCase();
@@ -320,10 +331,136 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  const renderCreateButton = () => (
+    <button
+      onClick={() => setIsCreateModalOpen(true)}
+      className={`inline-flex items-center px-4 py-2 text-sm font-medium rounded-md
+        ${isDarkMode 
+          ? 'bg-emerald-600 text-white hover:bg-emerald-500' 
+          : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+        <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+      </svg>
+      Create Member
+    </button>
+  );
+
+  // Add this new function to handle suggestions
+  const getSuggestions = (value: string) => {
+    const inputValue = value.toLowerCase().trim();
+    if (inputValue.length < 1) {
+      setSuggestions([]);
+      return;
+    }
+
+    const suggestionSet = new Set<string>();
+    const suggestionArray: { value: string; type: string }[] = [];
+
+    members.forEach(member => {
+      // Check name
+      if (member.name && member.name.toLowerCase().includes(inputValue)) {
+        const suggestion = member.name;
+        if (!suggestionSet.has(suggestion)) {
+          suggestionSet.add(suggestion);
+          suggestionArray.push({ value: suggestion, type: 'name' });
+        }
+      }
+      // Check email
+      if (member.email && member.email.toLowerCase().includes(inputValue)) {
+        const suggestion = member.email;
+        if (!suggestionSet.has(suggestion)) {
+          suggestionSet.add(suggestion);
+          suggestionArray.push({ value: suggestion, type: 'email' });
+        }
+      }
+      // Check phone
+      if (member.phone && member.phone.toLowerCase().includes(inputValue)) {
+        const suggestion = member.phone;
+        if (!suggestionSet.has(suggestion)) {
+          suggestionSet.add(suggestion);
+          suggestionArray.push({ value: suggestion, type: 'phone' });
+        }
+      }
+    });
+
+    setSuggestions(suggestionArray.slice(0, 5)); // Limit to 5 suggestions
+  };
+
+  // Add click outside handler
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-50">
-        <div className="animate-spin rounded-full h-16 w-16 border-4 border-emerald-500 border-t-transparent"></div>
+      <div className={`px-4 sm:px-6 lg:px-8 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+        <div className="sm:flex sm:items-center">
+          <div className="sm:flex-auto">
+            <div className={`h-8 w-48 rounded mb-2 animate-pulse ${isDarkMode ? 'bg-gray-800' : 'bg-gray-300'}`} />
+            <div className={`h-4 w-64 rounded animate-pulse ${isDarkMode ? 'bg-gray-800' : 'bg-gray-300'}`} />
+          </div>
+        </div>
+
+        {/* Stats Cards Skeleton */}
+        <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <StatCardSkeleton />
+          <StatCardSkeleton />
+          <StatCardSkeleton />
+        </div>
+
+        {/* Table Skeleton */}
+        <div className={`mt-8 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow rounded-lg`}>
+          <div className="p-4 sm:p-6 lg:p-8">
+            <div className="sm:flex sm:items-center">
+              <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
+                <div className={`h-10 w-64 rounded animate-pulse ${isDarkMode ? 'bg-gray-700' : 'bg-gray-300'}`} />
+              </div>
+            </div>
+
+            <div className="mt-8 flow-root">
+              <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
+                <div className="inline-block min-w-full py-2 align-middle">
+                  <table className="min-w-full divide-y divide-gray-300">
+                    <thead>
+                      <tr>
+                        <th scope="col" className={`py-3.5 pl-4 pr-3 text-left text-sm font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+                          NAME
+                        </th>
+                        <th scope="col" className={`px-3 py-3.5 text-left text-sm font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+                          CONTACT
+                        </th>
+                        <th scope="col" className={`px-3 py-3.5 text-left text-sm font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+                          MEMBERSHIP
+                        </th>
+                        <th scope="col" className={`px-3 py-3.5 text-left text-sm font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+                          STATUS
+                        </th>
+                        <th scope="col" className={`relative py-3.5 pl-3 pr-4 sm:pr-6 ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+                          <span className="sr-only">Actions</span>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className={`${isDarkMode ? 'divide-gray-700' : 'divide-gray-200'}`}>
+                      {[1, 2, 3, 4, 5].map((i) => (
+                        <TableRowSkeleton key={i} />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -347,7 +484,7 @@ const AdminDashboard: React.FC = () => {
 
   return (
     <div className={`px-4 sm:px-6 lg:px-8 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
-      <div className="sm:flex sm:items-center">
+      <div className="sm:flex sm:items-center justify-between">
         <div className="sm:flex-auto">
           <h1 className={`text-2xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
             Admin Dashboard
@@ -355,6 +492,89 @@ const AdminDashboard: React.FC = () => {
           <p className={`mt-2 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-700'}`}>
             Manage your members and view statistics
           </p>
+        </div>
+        <div className="mt-4 sm:mt-0 sm:flex gap-4 items-center">
+          <div className="flex gap-2">
+            <div className="relative" ref={searchRef}>
+              <input
+                type="text"
+                placeholder="Search members..."
+                value={searchTerm}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setSearchTerm(value);
+                  setCurrentPage(1);
+                  getSuggestions(value);
+                  setShowSuggestions(true);
+                }}
+                onFocus={() => {
+                  if (searchTerm) {
+                    getSuggestions(searchTerm);
+                    setShowSuggestions(true);
+                  }
+                }}
+                className={`block w-full rounded-md border-0 py-1.5 pl-10 pr-3 ${
+                  isDarkMode
+                    ? 'bg-gray-700 text-white placeholder-gray-400'
+                    : 'bg-white text-gray-900 placeholder-gray-500'
+                } shadow-sm ring-1 ring-inset ${
+                  isDarkMode ? 'ring-gray-600' : 'ring-gray-300'
+                } focus:ring-2 focus:ring-emerald-600 sm:text-sm sm:leading-6`}
+              />
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                <svg className={`h-5 w-5 ${isDarkMode ? 'text-gray-400' : 'text-gray-400'}`} viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clipRule="evenodd" />
+                </svg>
+              </div>
+              
+              {/* Suggestions Dropdown */}
+              {showSuggestions && suggestions.length > 0 && (
+                <div className={`absolute z-10 mt-1 w-full rounded-md shadow-lg ${
+                  isDarkMode ? 'bg-gray-700' : 'bg-white'
+                } ring-1 ring-black ring-opacity-5`}>
+                  <ul className="max-h-60 overflow-auto py-1" role="listbox">
+                    {suggestions.map((suggestion, index) => (
+                      <li
+                        key={index}
+                        onClick={() => {
+                          setSearchTerm(suggestion.value);
+                          setShowSuggestions(false);
+                          setCurrentPage(1);
+                        }}
+                        className={`cursor-pointer flex items-center justify-between px-4 py-2 text-sm ${
+                          isDarkMode
+                            ? 'hover:bg-gray-600 text-gray-200'
+                            : 'hover:bg-gray-100 text-gray-900'
+                        }`}
+                      >
+                        <span>{suggestion.value}</span>
+                        <span className={`text-xs px-2 py-1 rounded ${
+                          isDarkMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-200 text-gray-600'
+                        }`}>
+                          {suggestion.type}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+            <button
+              onClick={() => {
+                setSearchTerm('');
+                setShowSuggestions(false);
+                fetchMembers();
+              }}
+              className={`px-3 py-1.5 rounded-md ${
+                isDarkMode
+                  ? 'bg-indigo-600 text-white hover:bg-indigo-500'
+                  : 'bg-indigo-600 text-white hover:bg-indigo-700'
+              }`}
+            >
+              Refresh
+            </button>
+          </div>
+          {renderCreateButton()}
         </div>
       </div>
 
@@ -427,36 +647,6 @@ const AdminDashboard: React.FC = () => {
       {/* Search and Table Section */}
       <div className={`mt-8 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow rounded-lg`}>
         <div className="p-4 sm:p-6 lg:p-8">
-          <div className="sm:flex sm:items-center">
-            <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
-              <div className="relative rounded-md shadow-sm">
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search members by name, email, or phone..."
-                  className={`block w-full rounded-md border-0 py-1.5 pr-10 ring-1 ring-inset 
-                    ${isDarkMode 
-                      ? 'bg-gray-700 text-white placeholder-gray-400 ring-gray-600 focus:ring-indigo-500' 
-                      : 'bg-white text-gray-900 placeholder-gray-400 ring-gray-300 focus:ring-indigo-600'
-                    } focus:ring-2 focus:ring-inset sm:text-sm sm:leading-6`}
-                />
-              </div>
-            </div>
-            <div className="mt-4 sm:mt-0 sm:ml-4">
-              <button
-                onClick={() => window.location.reload()}
-                className={`inline-flex items-center rounded-md px-3 py-2 text-sm font-semibold shadow-sm 
-                  ${isDarkMode 
-                    ? 'bg-indigo-500 text-white hover:bg-indigo-400' 
-                    : 'bg-indigo-600 text-white hover:bg-indigo-500'
-                  }`}
-              >
-                Refresh
-              </button>
-            </div>
-          </div>
-
           <div className="mt-8 flow-root">
             <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
               <div className="inline-block min-w-full py-2 align-middle">
@@ -484,7 +674,7 @@ const AdminDashboard: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className={`${isDarkMode ? 'divide-gray-700' : 'divide-gray-200'}`}>
-                    {members.map((member) => (
+                    {paginatedMembers.map((member) => (
                       <tr key={member.id} className={`${isDarkMode ? 'hover:bg-gray-700/50' : 'hover:bg-gray-50'}`}>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
@@ -559,6 +749,14 @@ const AdminDashboard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <CreateUserModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={() => {
+          fetchMembers();
+        }}
+      />
     </div>
   );
 };
